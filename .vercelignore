@@ -1,0 +1,10 @@
+app.py
+config.py
+database
+analytics
+market_feeds
+*.py
+requirements.txt
+__pycache__
+.env
+.env.local
