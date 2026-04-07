@@ -3,6 +3,8 @@ export async function GET(req) {
   const url = new URL(req.url);
   const pathname = url.pathname;
 
+  console.log('GET request:', pathname, 'Full URL:', req.url);
+
   // CORS headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -11,13 +13,13 @@ export async function GET(req) {
     'Content-Type': 'application/json',
   };
 
-  // Health check
-  if (pathname === '/health' || pathname === '/api/health') {
-    return new Response(JSON.stringify({ status: 'ok' }), { headers });
+  // Health check - match both with and without /api prefix
+  if (pathname === '/health' || pathname === '/api/health' || pathname.endsWith('health')) {
+    return new Response(JSON.stringify({ status: 'ok', path: pathname }), { headers });
   }
 
-  // Sample Report
-  if (pathname === '/v1/sample-report' || pathname === '/api/v1/sample-report') {
+  // Sample Report - match both with and without /api prefix
+  if (pathname.includes('sample-report')) {
     return new Response(JSON.stringify([
       { id: 1, oracle: 'Weather', event: 'Temperature spike', probability: 85, confidence: 9, action: 'BUY_YES', reasoning: 'NOAA forecast shows significant deviation' },
       { id: 2, oracle: 'Politics', event: 'Election momentum shift', probability: 72, confidence: 7, action: 'BUY_YES', reasoning: 'Polling data indicates trend change' },
@@ -28,37 +30,15 @@ export async function GET(req) {
     ]), { headers });
   }
 
-  // Analytics endpoints
-  if (pathname === '/v1/analytics/whale-activity' || pathname === '/api/v1/analytics/whale-activity') {
-    return new Response(JSON.stringify({ data: 'whale activity data' }), { headers });
-  }
-
-  if (pathname === '/v1/analytics/arbitrage' || pathname === '/api/v1/analytics/arbitrage') {
-    return new Response(JSON.stringify({ data: 'arbitrage opportunities' }), { headers });
-  }
-
-  if (pathname === '/v1/analytics/insider-patterns' || pathname === '/api/v1/analytics/insider-patterns') {
-    return new Response(JSON.stringify({ data: 'insider patterns' }), { headers });
-  }
-
-  // Predictions list
-  if (pathname === '/v1/predictions' || pathname === '/api/v1/predictions') {
-    return new Response(JSON.stringify({ predictions: [] }), { headers });
-  }
-
-  // Rate limit check
-  const rateLimit = pathname.match(/^\/(?:api\/)?v1\/user\/(.+)\/rate-limit$/);
-  if (rateLimit) {
-    return new Response(JSON.stringify({ requests_today: 0, limit: 50 }), { headers });
-  }
-
-  // 404
-  return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers });
+  // All other GET requests
+  return new Response(JSON.stringify({ error: 'Not found', path: pathname }), { status: 404, headers });
 }
 
 export async function POST(req) {
   const url = new URL(req.url);
   const pathname = url.pathname;
+
+  console.log('POST request:', pathname, 'Full URL:', req.url);
 
   // CORS headers
   const headers = {
@@ -72,7 +52,7 @@ export async function POST(req) {
     const body = await req.json();
 
     // Checkout
-    if (pathname === '/v1/billing/checkout' || pathname === '/api/v1/billing/checkout') {
+    if (pathname.includes('checkout')) {
       const { tier } = body;
       return new Response(JSON.stringify({
         session_url: `https://checkout.stripe.com/pay/cs_test_${Math.random().toString(36).slice(2, 15)}`,
@@ -83,7 +63,7 @@ export async function POST(req) {
     }
 
     // Generate API Key
-    if (pathname === '/v1/keys/generate' || pathname === '/api/v1/keys/generate') {
+    if (pathname.includes('keys/generate')) {
       const { email } = body;
       return new Response(JSON.stringify({
         api_key: `sk_live_${Math.random().toString(36).slice(2, 15)}`,
@@ -96,15 +76,16 @@ export async function POST(req) {
     }
 
     // Stripe webhook
-    if (pathname === '/v1/billing/webhooks/stripe' || pathname === '/api/v1/billing/webhooks/stripe') {
+    if (pathname.includes('webhooks/stripe')) {
       return new Response(JSON.stringify({ status: 'received' }), { headers });
     }
   } catch (err) {
+    console.error('POST error:', err);
     return new Response(JSON.stringify({ error: 'Invalid request body' }), { status: 400, headers });
   }
 
   // 404
-  return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers });
+  return new Response(JSON.stringify({ error: 'Not found', path: pathname }), { status: 404, headers });
 }
 
 export async function OPTIONS(req) {
