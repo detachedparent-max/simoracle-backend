@@ -1,199 +1,80 @@
-// Vercel Functions handler for SimOracle stub backend
-// Uses Web Request/Response API (not Express)
+// Vercel serverless function wrapper for Express app
+import express from 'express';
+import cors from 'cors';
 
-export default async function handler(req, res) {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-  );
+const app = express();
 
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
+// Middleware
+app.use(cors());
+app.use(express.json());
 
-  const { pathname, searchParams } = new URL(req.url, 'http://localhost');
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
 
-  // Health check
-  if (pathname === '/health' && req.method === 'GET') {
-    return res.status(200).json({ status: 'ok' });
-  }
+// Sample Report
+app.get('/api/v1/sample-report', (req, res) => {
+  res.json([
+    { id: 1, oracle: 'Weather', event: 'Temperature spike', probability: 85, confidence: 9, action: 'BUY_YES', reasoning: 'NOAA forecast shows significant deviation' },
+    { id: 2, oracle: 'Politics', event: 'Election momentum shift', probability: 72, confidence: 7, action: 'BUY_YES', reasoning: 'Polling data indicates trend change' },
+    { id: 3, oracle: 'Sports', event: 'Team injury impact', probability: 78, confidence: 8, action: 'BUY_NO', reasoning: 'Historical data shows injury recovery rates' },
+    { id: 4, oracle: 'Markets', event: 'Earnings surprise', probability: 65, confidence: 6, action: 'BUY_YES', reasoning: 'SEC filings show unusual activity' },
+    { id: 5, oracle: 'Arbitrage', event: 'Dutch book opportunity', probability: 91, confidence: 10, action: 'BUY_YES', reasoning: 'YES+NO combined odds exceed 100%' },
+    { id: 6, oracle: 'Whale Activity', event: 'Large position accumulation', probability: 88, confidence: 9, action: 'BUY_YES', reasoning: 'Order book analysis detected accumulation' },
+  ]);
+});
 
-  // Sample report
-  if (pathname === '/api/v1/sample-report' && req.method === 'GET') {
-    return res.status(200).json({
-      predictions: [
-        {
-          id: 'pred_001',
-          oracle: 'weather',
-          event: 'NYC Temperature > 75F on Apr 10',
-          probability: 0.72,
-          confidence: 8,
-          action: 'BUY_YES',
-          reasoning: 'NWS forecast shows high-pressure system. Historical accuracy 85%.'
-        },
-        {
-          id: 'pred_002',
-          oracle: 'arbitrage',
-          event: 'Kalshi-Polymarket price gap > 5%',
-          probability: 0.68,
-          confidence: 7,
-          action: 'EXPLOIT_ARB',
-          reasoning: 'Cross-platform analysis detects YES overpriced on Kalshi.'
-        },
-        {
-          id: 'pred_003',
-          oracle: 'whale',
-          event: 'Institutional order imbalance',
-          probability: 0.81,
-          confidence: 9,
-          action: 'FOLLOW_WHALE',
-          reasoning: '$250K order cluster on YES side. Insider signal 9/10.'
-        },
-        {
-          id: 'pred_004',
-          oracle: 'politics',
-          event: 'Policy announcement probability',
-          probability: 0.55,
-          confidence: 6,
-          action: 'WAIT',
-          reasoning: 'Multi-LLM consensus shows conflicting signals.'
-        },
-        {
-          id: 'pred_005',
-          oracle: 'sports',
-          event: 'Team A victory probability',
-          probability: 0.64,
-          confidence: 7,
-          action: 'BUY_YES',
-          reasoning: 'Undervaluing home field. Edge 16.3%.'
-        },
-        {
-          id: 'pred_006',
-          oracle: 'equity',
-          event: 'Stock > $150 by EOY',
-          probability: 0.73,
-          confidence: 7,
-          action: 'BUY_YES',
-          reasoning: 'Technical + insider patterns suggest 73%.'
-        }
-      ]
-    });
-  }
+// Checkout
+app.post('/api/v1/billing/checkout', (req, res) => {
+  const { tier } = req.body;
+  res.json({
+    session_url: `https://checkout.stripe.com/pay/cs_test_${Math.random().toString(36).slice(2, 15)}`,
+    tier,
+    price: tier === 'all' ? 499 : 89,
+    name: tier === 'all' ? 'All Oracles' : 'Single Oracle',
+  });
+});
 
-  // Stripe checkout
-  if (pathname === '/api/v1/billing/checkout' && req.method === 'POST') {
-    const body = await req.json();
-    const tier = body?.tier || 'startup';
-    const tiers = {
-      startup: { price: 99, name: 'Intelligence Dashboard' },
-      pro: { price: 299, name: 'Professional Suite' },
-      enterprise: { price: 999, name: 'Enterprise Custom' }
-    };
-    const tierInfo = tiers[tier] || tiers.startup;
+// Generate API Key
+app.post('/api/v1/keys/generate', (req, res) => {
+  const { email } = req.body;
+  res.json({
+    api_key: `sk_live_${Math.random().toString(36).slice(2, 15)}`,
+    email,
+    rate_limit: 50,
+    tier: 'free',
+    created_at: new Date().toISOString(),
+    message: 'API key generated successfully',
+  });
+});
 
-    return res.status(200).json({
-      session_url: `https://checkout.stripe.com/pay/cs_test_${Math.random().toString(36).slice(2, 14)}`,
-      tier,
-      price: tierInfo.price,
-      name: tierInfo.name
-    });
-  }
+// Analytics endpoints
+app.get('/api/v1/analytics/whale-activity', (req, res) => {
+  res.json({ data: 'whale activity data' });
+});
 
-  // API key generation
-  if (pathname === '/api/v1/keys/generate' && req.method === 'POST') {
-    const body = await req.json();
-    const email = body?.email || 'user@example.com';
+app.get('/api/v1/analytics/arbitrage', (req, res) => {
+  res.json({ data: 'arbitrage opportunities' });
+});
 
-    return res.status(200).json({
-      api_key: `sk_live_${Math.random().toString(36).slice(2, 32)}`,
-      email,
-      rate_limit: 50,
-      rate_limit_period: 'day',
-      tier: 'free',
-      created_at: new Date().toISOString(),
-      message: 'API key generated. 50 requests per day limit.'
-    });
-  }
+app.get('/api/v1/analytics/insider-patterns', (req, res) => {
+  res.json({ data: 'insider patterns' });
+});
 
-  // Whale activity
-  if (pathname === '/api/v1/analytics/whale-activity' && req.method === 'GET') {
-    return res.status(200).json({
-      timestamp: new Date().toISOString(),
-      whale_score: 8.2,
-      large_orders: [
-        { size: 50000, side: 'YES', confidence: 9, market: 'NYC Weather' },
-        { size: 30000, side: 'NO', confidence: 7, market: 'Policy Vote' },
-        { size: 25000, side: 'YES', confidence: 8, market: 'Sports Event' }
-      ],
-      trend: 'bullish'
-    });
-  }
+// Predictions list
+app.get('/api/v1/predictions', (req, res) => {
+  res.json({ predictions: [] });
+});
 
-  // Arbitrage
-  if (pathname === '/api/v1/analytics/arbitrage' && req.method === 'GET') {
-    return res.status(200).json({
-      timestamp: new Date().toISOString(),
-      opportunities: [
-        {
-          event: 'NYC Temperature > 75F',
-          kalshi_yes: 0.68,
-          polymarket_yes: 0.65,
-          spread: 0.03,
-          edge: 'EXPLOIT_BUY_POLYMARKET',
-          risk_free: true
-        }
-      ]
-    });
-  }
+// Stripe webhook
+app.post('/api/v1/billing/webhooks/stripe', (req, res) => {
+  res.json({ status: 'received' });
+});
 
-  // Insider patterns
-  if (pathname === '/api/v1/analytics/insider-patterns' && req.method === 'GET') {
-    return res.status(200).json({
-      timestamp: new Date().toISOString(),
-      signals: [
-        { pattern: 'Unusual timing cluster', confidence: 9, market: 'NYC Weather', direction: 'bullish' }
-      ]
-    });
-  }
+// Rate limit check
+app.get('/api/v1/user/:api_key/rate-limit', (req, res) => {
+  res.json({ requests_today: 0, limit: 50 });
+});
 
-  // Predictions
-  if (pathname === '/api/v1/predictions' && req.method === 'GET') {
-    return res.status(200).json({
-      predictions: [
-        { id: 'pred_001', oracle: 'weather', event: 'NYC > 75F', probability: 0.72, confidence: 8, status: 'active' }
-      ],
-      total: 1
-    });
-  }
-
-  // Stripe webhook
-  if (pathname === '/api/v1/billing/webhooks/stripe' && req.method === 'POST') {
-    return res.status(200).json({ status: 'received' });
-  }
-
-  // Rate limit
-  if (pathname.match(/^\/api\/v1\/user\/.*\/rate-limit$/) && req.method === 'GET') {
-    return res.status(200).json({
-      requests_used: 25,
-      requests_limit: 50,
-      remaining: 25
-    });
-  }
-
-  // Root
-  if (pathname === '/' && req.method === 'GET') {
-    return res.status(200).json({
-      name: 'SimOracle Stub Backend',
-      version: '0.1.0',
-      status: 'running'
-    });
-  }
-
-  // 404
-  return res.status(404).json({ error: 'Not found' });
-}
+export default app;
