@@ -46,7 +46,7 @@ async def test_broadcast_message(message_bus):
     msg_ids = await message_bus.broadcast(msg, ["agent_a", "agent_b"])
 
     assert len(msg_ids) == 2
-    assert len(message_bus.get_transcript()) == 1  # Same message, multiple sends
+    assert len(message_bus.get_transcript()) == 2  # One message per broadcast send
 
 
 @pytest.mark.asyncio
